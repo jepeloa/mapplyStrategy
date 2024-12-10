@@ -93,9 +93,9 @@ class mapplySupertrend(IStrategy):
                (dataframe['supertrend_1_buy'] == 'up') &
                (dataframe['supertrend_2_buy'] == 'up') &
                (dataframe['supertrend_3_buy'] == 'up') &
-               (dataframe['close'] > dataframe['sma_200']) &
-               (dataframe['ADX'] > adx_threshold) &   # Fuerte tendencia
-               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
+               #(dataframe['close'] > dataframe['sma_200']) &
+               #(dataframe['ADX'] > adx_threshold) &   # Fuerte tendencia
+               #(dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
                (dataframe['volume'] > 0)
             ),
             'enter_long'] = 1
