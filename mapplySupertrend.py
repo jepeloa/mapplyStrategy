@@ -86,7 +86,7 @@ class mapplySupertrend(IStrategy):
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         # Filtro ADX: tendencia fuerte (por ej. ADX > 20)
-        
+        adx_threshold = 20
 
         dataframe.loc[
             (
@@ -102,9 +102,10 @@ class mapplySupertrend(IStrategy):
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         # Mantenemos la salida igual, o podríamos exigir también condiciones de ADX/DI para salir.
         # Por simplicidad, dejemos que la salida sea más libre.
+        adx_threshold=20
         dataframe.loc[
             (
-               adx_threshold = 20
+
                (dataframe['supertrend_1_buy'] == 'up') &
                (dataframe['supertrend_2_buy'] == 'up') &
                (dataframe['supertrend_3_buy'] == 'up') &
