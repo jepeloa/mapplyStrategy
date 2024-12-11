@@ -87,15 +87,13 @@ class mapplySupertrend(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         # Filtro ADX: tendencia fuerte (por ej. ADX > 20)
         adx_threshold = 20
-        di_difference_threshold = 5
         dataframe.loc[
             (
                (dataframe['supertrend_1_sell'] == 'down') &
                (dataframe['supertrend_2_sell'] == 'down') &
                (dataframe['supertrend_3_sell'] == 'down') &
-               (dataframe['ADX'] < adx_threshold) &  # Mercado lateral
-               (abs(dataframe['DI_plus'] - dataframe['DI_minus']) < di_difference_threshold) &  # Confirmar lateralidad
-               (abs(dataframe['close'] - dataframe['sma_200']) < dataframe['sma_200'] * 0.02) &  # Precio cerca de SMA200
+               (dataframe['ADX'] > adx_threshold) &  # Mercado lateral
+               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
                (dataframe['volume'] > 0)  # Filtro de volumen
             ),
             'enter_long'] = 1
@@ -112,6 +110,9 @@ class mapplySupertrend(IStrategy):
                (dataframe['supertrend_1_buy'] == 'up') &
                (dataframe['supertrend_2_buy'] == 'up') &
                (dataframe['supertrend_3_buy'] == 'up') &
+               (dataframe['close'] > dataframe['sma_200']) &
+               (dataframe['ADX'] > adx_threshold) &   # Fuerte tendencia
+               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
                (dataframe['volume'] > 0)
 
             ),
