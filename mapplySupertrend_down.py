@@ -26,13 +26,13 @@ class mapplySupertrend(IStrategy):
     }
 
     minimal_roi = {
-        "0": 0.087,
-        "372": 0.058,
-        "861": 0.029,
+        "0": 0.05,
+        "372": 0.03,
+        "861": 0.01,
         "2221": 0
     }
 
-    stoploss = -0.265
+    stoploss = -0.12
 
     trailing_stop = True
     trailing_stop_positive = 0.05
