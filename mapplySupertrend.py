@@ -92,8 +92,8 @@ class mapplySupertrend(IStrategy):
                (dataframe['supertrend_1_sell'] == 'down') &
                (dataframe['supertrend_2_sell'] == 'down') &
                (dataframe['supertrend_3_sell'] == 'down') &
-               (dataframe['ADX'] > adx_threshold) &  # Mercado lateral
-               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
+               #(dataframe['ADX'] > adx_threshold) &  # Mercado lateral
+               #(dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
                (dataframe['volume'] > 0)  # Filtro de volumen
             ),
             'enter_long'] = 1
