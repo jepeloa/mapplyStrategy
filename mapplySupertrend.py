@@ -1,119 +1,163 @@
-from freqtrade.strategy.interface import IStrategy
-from pandas import DataFrame, merge
+import logging
+from freqtrade.strategy import IStrategy, IntParameter
+from pandas import DataFrame
 import talib.abstract as ta
-from functools import reduce
-import pandas as pd
+import numpy as np
 
 class mapplySupertrend(IStrategy):
-    # Configuración de ROI decreciente por tiempo
-    minimal_roi = {
-        "0": 0.03,
-        "30": 0.03,
-        "60": 0.03,
-        "120": 0.03
+    INTERFACE_VERSION: int = 3
+    
+    buy_params = {
+        "buy_m1": 4,
+        "buy_m2": 7,
+        "buy_m3": 1,
+        "buy_p1": 8,
+        "buy_p2": 9,
+        "buy_p3": 8,
     }
 
-    # Configuración de otros parámetros
-    timeframe = '5m'
-    informative_timeframes = ['15m', '1h', '4h']
-    stoploss = -0.20
-    max_open_trades = 120
+    sell_params = {
+        "sell_m1": 1,
+        "sell_m2": 3,
+        "sell_m3": 6,
+        "sell_p1": 16,
+        "sell_p2": 18,
+        "sell_p3": 18,
+    }
 
-    def informative_pairs(self):
-        pairs = self.dp.current_whitelist()
-        informative_pairs = []
-        for pair in pairs:
-            for timeframe in self.informative_timeframes:
-                informative_pairs.append((pair, timeframe))
-        return informative_pairs
+    minimal_roi = {
+        "0": 0.05,
+        "372": 0.03,
+        "861": 0.01,
+        "2221": 0
+    }
+
+    stoploss = -0.12
+
+    trailing_stop = True
+    trailing_stop_positive = 0.05
+    trailing_stop_positive_offset = 0.144
+    trailing_only_offset_is_reached = False
+
+    timeframe = '1h'
+    startup_candle_count = 200
+
+    buy_m1 = IntParameter(1, 7, default=4, space='buy')
+    buy_m2 = IntParameter(1, 7, default=4, space='buy')
+    buy_m3 = IntParameter(1, 7, default=4, space='buy')
+    buy_p1 = IntParameter(7, 21, default=14, space='buy')
+    buy_p2 = IntParameter(7, 21, default=14, space='buy')
+    buy_p3 = IntParameter(7, 21, default=14, space='buy')
+
+    sell_m1 = IntParameter(1, 7, default=4, space='sell')
+    sell_m2 = IntParameter(1, 7, default=4, space='sell')
+    sell_m3 = IntParameter(1, 7, default=4, space='sell')
+    sell_p1 = IntParameter(7, 21, default=14, space='sell')
+    sell_p2 = IntParameter(7, 21, default=14, space='sell')
+    sell_p3 = IntParameter(7, 21, default=14, space='sell')
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Indicadores en el marco de tiempo base (5m)
-        dataframe['rsi'] = ta.RSI(dataframe, timeperiod=14)
+        # Calcular supertrends para la configuración actual
+        supertrend_1_buy = self.supertrend(dataframe, self.buy_m1.value, self.buy_p1.value)
+        supertrend_2_buy = self.supertrend(dataframe, self.buy_m2.value, self.buy_p2.value)
+        supertrend_3_buy = self.supertrend(dataframe, self.buy_m3.value, self.buy_p3.value)
 
-        dataframe['mfi'] = ta.MFI(dataframe, timeperiod=14)
-        stoch_rsi = ta.STOCHRSI(dataframe, timeperiod=14)
-        dataframe['stoch_rsi'] = stoch_rsi['fastk']
-        dataframe['CDLHAMMER'] = ta.CDLHAMMER(dataframe)
+        supertrend_1_sell = self.supertrend(dataframe, self.sell_m1.value, self.sell_p1.value)
+        supertrend_2_sell = self.supertrend(dataframe, self.sell_m2.value, self.sell_p2.value)
+        supertrend_3_sell = self.supertrend(dataframe, self.sell_m3.value, self.sell_p3.value)
 
-        # Normalizar indicadores al rango 0-1
-        dataframe['rsi_norm'] = dataframe['rsi'] / 100
-        dataframe['mfi_norm'] = dataframe['mfi'] / 100
-        dataframe['stoch_rsi_norm'] = dataframe['stoch_rsi'] / 100
+        dataframe['supertrend_1_buy'] = supertrend_1_buy['STX']
+        dataframe['supertrend_2_buy'] = supertrend_2_buy['STX']
+        dataframe['supertrend_3_buy'] = supertrend_3_buy['STX']
 
-        # Obtener indicadores en marcos de tiempo informativos
-        for timeframe in self.informative_timeframes:
-            informative_df = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=timeframe)
+        dataframe['supertrend_1_sell'] = supertrend_1_sell['STX']
+        dataframe['supertrend_2_sell'] = supertrend_2_sell['STX']
+        dataframe['supertrend_3_sell'] = supertrend_3_sell['STX']
 
-            # Calcular indicadores en el marco de tiempo informativo
-            informative_df[f'rsi_{timeframe}'] = ta.RSI(informative_df, timeperiod=14)
-            informative_df[f'mfi_{timeframe}'] = ta.MFI(informative_df, timeperiod=14)
-            stoch_rsi_inf = ta.STOCHRSI(informative_df, timeperiod=14)
-            informative_df[f'stoch_rsi_{timeframe}'] = stoch_rsi_inf['fastk']
+        # SMA de 200 para filtro de tendencia
+        dataframe['sma_200'] = ta.SMA(dataframe, timeperiod=200)
 
-            # Normalizar indicadores al rango 0-1
-            informative_df[f'composite_signal_{timeframe}'] = (
-                informative_df[f'rsi_{timeframe}'] / 100 * 
-                informative_df[f'mfi_{timeframe}'] / 100 * 
-                informative_df[f'stoch_rsi_{timeframe}'] / 100
-            )
+        # ADX + DI+ y DI-
+        dataframe['ADX'] = ta.ADX(dataframe, timeperiod=14)
+        dataframe['DI_plus'] = ta.PLUS_DI(dataframe, timeperiod=14)
+        dataframe['DI_minus'] = ta.MINUS_DI(dataframe, timeperiod=14)
 
-            # Seleccionar columnas necesarias
-            informative_df = informative_df[['date', f'composite_signal_{timeframe}']]
-
-            # Fusionar manualmente el DataFrame informativo con el DataFrame principal
-            dataframe = merge(dataframe, informative_df, on='date', how='left')
-
-        # Señal compuesta por multiplicación de indicadores en el marco de tiempo base
-        dataframe['composite_signal'] = dataframe['rsi_norm'] * dataframe['mfi_norm'] * dataframe['stoch_rsi_norm']
-
-        print(dataframe.columns)  # Para verificar las columnas resultantes
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Umbral para la señal compuesta
-        composite_threshold = 0
-
-        # Condiciones de compra
-        conditions = [
-            dataframe['composite_signal'] > composite_threshold
-        ]
-
-        # Condiciones adicionales con marcos de tiempo informativos
-        if 'composite_signal_4h' in dataframe.columns and 'composite_signal_1h' in dataframe.columns:
-            condition_1 = dataframe['composite_signal_4h'] > dataframe['composite_signal_1h']
-            conditions.append(condition_1)
-            print("Condition 1 (4h > 1h):", condition_1.sum())
-
-        if 'composite_signal_15m' in dataframe.columns and 'composite_signal_1h' in dataframe.columns:
-            condition_2 = dataframe['composite_signal_15m'] > dataframe['composite_signal_1h']
-            conditions.append(condition_2)
-            print("Condition 2 (15m > 1h):", condition_2.sum())
-
-        if 'composite_signal' in dataframe.columns and 'composite_signal_15m' in dataframe.columns:
-            condition_3 = dataframe['composite_signal'] > dataframe['composite_signal_15m']
-            conditions.append(condition_3)
-            print("Condition 3 (composite > 15m):", condition_3.sum())
-
-        # Aplicar condiciones para la señal de compra si se cumplen todas
-        if conditions:
-            dataframe.loc[
-                reduce(lambda x, y: x & y, conditions),
-                "enter_long"] = 1
+        # Filtro ADX: tendencia fuerte (por ej. ADX > 20)
+        adx_threshold = 20
+        dataframe.loc[
+            (
+               (dataframe['supertrend_1_sell'] == 'down') &
+               (dataframe['supertrend_2_sell'] == 'down') &
+               (dataframe['supertrend_3_sell'] == 'down') &
+               #(dataframe['ADX'] > adx_threshold) &  # Mercado lateral
+               #(dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
+               (dataframe['volume'] > 0)  # Filtro de volumen
+            ),
+            'enter_long'] = 1
 
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Placeholder para lógica de venta, si es necesario implementarla
-        #  composite_threshold = 0.8
+        # Mantenemos la salida igual, o podríamos exigir también condiciones de ADX/DI para salir.
+        # Por simplicidad, dejemos que la salida sea más libre.
+        adx_threshold=20
+        dataframe.loc[
+            (
 
-        # # Condiciones de compra
-        #  conditions = [
-        #     dataframe['composite_signal'] > composite_threshold
-        #  ]
-        #  if conditions:
-        #      dataframe.loc[
-        #          reduce(lambda x, y: x & y, conditions),
-        #          'sell'] = 1
-             
-         return dataframe
+               (dataframe['supertrend_1_buy'] == 'up') &
+               (dataframe['supertrend_2_buy'] == 'up') &
+               (dataframe['supertrend_3_buy'] == 'up') &
+               (dataframe['close'] > dataframe['sma_200']) &
+               (dataframe['ADX'] > adx_threshold) &   # Fuerte tendencia
+               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
+               (dataframe['volume'] > 0)
+
+            ),
+            'exit_long'] = 1
+
+        return dataframe
+
+    def supertrend(self, dataframe: DataFrame, multiplier, period):
+        df = dataframe.copy()
+
+        df['TR'] = ta.TRANGE(df)
+        df['ATR'] = ta.SMA(df['TR'], period)
+
+        st = f'ST_{period}_{multiplier}'
+        stx = f'STX_{period}_{multiplier}'
+
+        df['basic_ub'] = (df['high'] + df['low']) / 2 + multiplier * df['ATR']
+        df['basic_lb'] = (df['high'] + df['low']) / 2 - multiplier * df['ATR']
+
+        df['final_ub'] = 0.00
+        df['final_lb'] = 0.00
+
+        for i in range(period, len(df)):
+            df['final_ub'].iat[i] = (df['basic_ub'].iat[i] if df['basic_ub'].iat[i] < df['final_ub'].iat[i - 1] or df['close'].iat[i - 1] > df['final_ub'].iat[i - 1]
+                                     else df['final_ub'].iat[i - 1])
+            df['final_lb'].iat[i] = (df['basic_lb'].iat[i] if df['basic_lb'].iat[i] > df['final_lb'].iat[i - 1] or df['close'].iat[i - 1] < df['final_lb'].iat[i - 1]
+                                     else df['final_lb'].iat[i - 1])
+
+        df[st] = 0.00
+        for i in range(period, len(df)):
+            if df[st].iat[i - 1] == df['final_ub'].iat[i - 1] and df['close'].iat[i] <= df['final_ub'].iat[i]:
+                df[st].iat[i] = df['final_ub'].iat[i]
+            elif df[st].iat[i - 1] == df['final_ub'].iat[i - 1] and df['close'].iat[i] > df['final_ub'].iat[i]:
+                df[st].iat[i] = df['final_lb'].iat[i]
+            elif df[st].iat[i - 1] == df['final_lb'].iat[i - 1] and df['close'].iat[i] >= df['final_lb'].iat[i]:
+                df[st].iat[i] = df['final_lb'].iat[i]
+            elif df[st].iat[i - 1] == df['final_lb'].iat[i - 1] and df['close'].iat[i] < df['final_lb'].iat[i]:
+                df[st].iat[i] = df['final_ub'].iat[i]
+
+        df[stx] = np.where((df[st] > 0.00), np.where((df['close'] < df[st]), 'down', 'up'), np.NaN)
+
+        df.drop(['basic_ub', 'basic_lb', 'final_ub', 'final_lb'], inplace=True, axis=1)
+        df.fillna(0, inplace=True)
+
+        return DataFrame(index=df.index, data={
+            'ST': df[st],
+            'STX': df[stx]
+        })
