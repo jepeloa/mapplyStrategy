@@ -39,7 +39,7 @@ class mapplySupertrend(IStrategy):
     trailing_stop_positive_offset = 0.144
     trailing_only_offset_is_reached = False
 
-    timeframe = '1h'
+    timeframe = '15m'
     startup_candle_count = 200
 
     buy_m1 = IntParameter(1, 7, default=4, space='buy')
