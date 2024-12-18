@@ -84,6 +84,10 @@ class mapplySupertrend(IStrategy):
 
         for val in self.sell_rsiTime.range:
             dataframe[f'rsi-sell-{val}'] = ta.RSI(dataframe, timeperiod=val)
+        dataframe['rsi'] = ta.RSI(dataframe)
+        rsi = 0.1 * (dataframe['rsi'] - 50)
+        dataframe['fisher_rsi'] = (np.exp(2 * rsi) - 1) / (np.exp(2 * rsi) + 1)
+        dataframe['sar'] = ta.SAR(dataframe)
 
         return dataframe
 
@@ -102,8 +106,10 @@ class mapplySupertrend(IStrategy):
 
         dataframe.loc[
             (
-                (dataframe[f'cci-sell-{self.sell_cciTime.value}'] > self.sell_cci.value) &
-                (dataframe[f'rsi-sell-{self.sell_rsiTime.value}'] > self.sell_rsi.value)
+                # (dataframe[f'cci-sell-{self.sell_cciTime.value}'] > self.sell_cci.value) &
+                # (dataframe[f'rsi-sell-{self.sell_rsiTime.value}'] > self.sell_rsi.value)
+                (dataframe['sar'] > dataframe['close']) &
+                (dataframe['fisher_rsi'] > 0.3)
             ),
             'exit_long'] = 1
 
