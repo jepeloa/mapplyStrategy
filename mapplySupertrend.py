@@ -13,6 +13,7 @@ from freqtrade.strategy import IStrategy
 from freqtrade.strategy import IntParameter
 from functools import reduce
 from pandas import DataFrame
+import numpy as np
 
 import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
