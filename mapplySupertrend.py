@@ -1,165 +1,110 @@
-import logging
-from freqtrade.strategy import IStrategy, IntParameter
+"""
+author      = "Kevin Ossenbrück"
+copyright   = "Free For Use"
+credits     = ["Bloom Trading, Mohsen Hassan"]
+license     = "MIT"
+version     = "1.0"
+maintainer  = "Kevin Ossenbrück"
+email       = "kevin.ossenbrueck@pm.de"
+status      = "Live"
+"""
+
+from freqtrade.strategy import IStrategy
+from freqtrade.strategy import IntParameter
+from functools import reduce
 from pandas import DataFrame
+
 import talib.abstract as ta
-import numpy as np
+import freqtrade.vendor.qtpylib.indicators as qtpylib
+import numpy
+
+
+
+# CCI timerperiods and values
+cciBuyTP = 72
+cciBuyVal = -175
+cciSellTP = 66
+cciSellVal = -106
+
+# RSI timeperiods and values
+rsiBuyTP = 36
+rsiBuyVal = 90
+rsiSellTP = 45
+rsiSellVal = 88
+
 
 class mapplySupertrend(IStrategy):
-    INTERFACE_VERSION: int = 3
-    
+    INTERFACE_VERSION = 3
+
+    timeframe = '15m'
+
+    stoploss = -0.34338
+
+    minimal_roi = {"0": 0.27058, "33": 0.0853, "64": 0.04093, "244": 0}
+
+    buy_cci = IntParameter(low=-200, high=200, default=100, space='buy', optimize=True)
+    buy_cciTime = IntParameter(low=10, high=80, default=20, space='buy', optimize=True)
+    buy_rsi = IntParameter(low=10, high=90, default=30, space='buy', optimize=True)
+    buy_rsiTime = IntParameter(low=10, high=80, default=26, space='buy', optimize=True)
+
+    sell_cci = IntParameter(low=-200, high=200, default=100, space='sell', optimize=True)
+    sell_cciTime = IntParameter(low=10, high=80, default=20, space='sell', optimize=True)
+    sell_rsi = IntParameter(low=10, high=90, default=30, space='sell', optimize=True)
+    sell_rsiTime = IntParameter(low=10, high=80, default=26, space='sell', optimize=True)
+
+    # Buy hyperspace params:
     buy_params = {
-        "buy_m1": 4,
-        "buy_m2": 7,
-        "buy_m3": 1,
-        "buy_p1": 8,
-        "buy_p2": 9,
-        "buy_p3": 8,
+        "buy_cci": -175,
+        "buy_cciTime": 72,
+        "buy_rsi": 90,
+        "buy_rsiTime": 36,
     }
 
+    # Sell hyperspace params:
     sell_params = {
-        "sell_m1": 1,
-        "sell_m2": 3,
-        "sell_m3": 6,
-        "sell_p1": 16,
-        "sell_p2": 18,
-        "sell_p3": 18,
+        "sell_cci": -106,
+        "sell_cciTime": 66,
+        "sell_rsi": 88,
+        "sell_rsiTime": 45,
     }
 
-    minimal_roi = {
-        "0": 0.562,
-        "372": 0.123,
-        "861": 0.029,
-        "2221": 0
-    }
-
-    stoploss = -0.347
-
-    trailing_stop = True
-    trailing_stop_positive = 0.187
-    trailing_stop_positive_offset = 0.249
-    trailing_only_offset_is_reached = False
-
-    timeframe = '5m'
-    startup_candle_count = 200
-
-    buy_m1 = IntParameter(1, 7, default=4, space='buy')
-    buy_m2 = IntParameter(1, 7, default=4, space='buy')
-    buy_m3 = IntParameter(1, 7, default=4, space='buy')
-    buy_p1 = IntParameter(7, 21, default=14, space='buy')
-    buy_p2 = IntParameter(7, 21, default=14, space='buy')
-    buy_p3 = IntParameter(7, 21, default=14, space='buy')
-
-    sell_m1 = IntParameter(1, 7, default=4, space='sell')
-    sell_m2 = IntParameter(1, 7, default=4, space='sell')
-    sell_m3 = IntParameter(1, 7, default=4, space='sell')
-    sell_p1 = IntParameter(7, 21, default=14, space='sell')
-    sell_p2 = IntParameter(7, 21, default=14, space='sell')
-    sell_p3 = IntParameter(7, 21, default=14, space='sell')
+    def informative_pairs(self):
+        return []
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Calcular supertrends para la configuración actual
-        supertrend_1_buy = self.supertrend(dataframe, self.buy_m1.value, self.buy_p1.value)
-        supertrend_2_buy = self.supertrend(dataframe, self.buy_m2.value, self.buy_p2.value)
-        supertrend_3_buy = self.supertrend(dataframe, self.buy_m3.value, self.buy_p3.value)
 
-        supertrend_1_sell = self.supertrend(dataframe, self.sell_m1.value, self.sell_p1.value)
-        supertrend_2_sell = self.supertrend(dataframe, self.sell_m2.value, self.sell_p2.value)
-        supertrend_3_sell = self.supertrend(dataframe, self.sell_m3.value, self.sell_p3.value)
+        for val in self.buy_cciTime.range:
+            dataframe[f'cci-{val}'] = ta.CCI(dataframe, timeperiod=val)
 
-        dataframe['supertrend_1_buy'] = supertrend_1_buy['STX']
-        dataframe['supertrend_2_buy'] = supertrend_2_buy['STX']
-        dataframe['supertrend_3_buy'] = supertrend_3_buy['STX']
+        for val in self.sell_cciTime.range:
+            dataframe[f'cci-sell-{val}'] = ta.CCI(dataframe, timeperiod=val)
 
-        dataframe['supertrend_1_sell'] = supertrend_1_sell['STX']
-        dataframe['supertrend_2_sell'] = supertrend_2_sell['STX']
-        dataframe['supertrend_3_sell'] = supertrend_3_sell['STX']
+        for val in self.buy_rsiTime.range:
+            dataframe[f'rsi-{val}'] = ta.RSI(dataframe, timeperiod=val)
 
-        # SMA de 200 para filtro de tendencia
-        dataframe['ema_25'] = ta.EMA(dataframe, timeperiod=25)
-
-        # ADX + DI+ y DI-
-        dataframe['ADX'] = ta.ADX(dataframe, timeperiod=14)
-        dataframe['DI_plus'] = ta.PLUS_DI(dataframe, timeperiod=14)
-        dataframe['DI_minus'] = ta.MINUS_DI(dataframe, timeperiod=14)
+        for val in self.sell_rsiTime.range:
+            dataframe[f'rsi-sell-{val}'] = ta.RSI(dataframe, timeperiod=val)
 
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Filtro ADX: tendencia fuerte (por ej. ADX > 20)
-        adx_threshold = 50
 
         dataframe.loc[
             (
-                #up markett
-               (dataframe['supertrend_1_buy'] == 'up') &
-               (dataframe['supertrend_2_buy'] == 'up') &
-               (dataframe['supertrend_3_buy'] == 'up') &
-               (dataframe['close'] > dataframe['ema_25']) &
-               (dataframe['ADX'] > adx_threshold) &   # Fuerte tendencia
-               (dataframe['DI_plus'] > dataframe['DI_minus']) &  # Confirma que la dirección es alcista
-               (dataframe['volume'] > 0)
-             
-
+                (dataframe[f'cci-{self.buy_cciTime.value}'] < self.buy_cci.value) &
+                (dataframe[f'rsi-{self.buy_rsiTime.value}'] < self.buy_rsi.value)
             ),
             'enter_long'] = 1
 
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Mantenemos la salida igual, o podríamos exigir también condiciones de ADX/DI para salir.
-        # Por simplicidad, dejemos que la salida sea más libre.
-        adx_threshold=20
+
         dataframe.loc[
             (
-
-            #    (dataframe['supertrend_1_sell'] == 'down') &
-            #    (dataframe['supertrend_2_sell'] == 'down') &
-            #    (dataframe['supertrend_3_sell'] == 'down') &
-            #    (dataframe['volume'] > 0)
-
+                (dataframe[f'cci-sell-{self.sell_cciTime.value}'] > self.sell_cci.value) &
+                (dataframe[f'rsi-sell-{self.sell_rsiTime.value}'] > self.sell_rsi.value)
             ),
             'exit_long'] = 1
 
         return dataframe
-
-    def supertrend(self, dataframe: DataFrame, multiplier, period):
-        df = dataframe.copy()
-
-        df['TR'] = ta.TRANGE(df)
-        df['ATR'] = ta.SMA(df['TR'], period)
-
-        st = f'ST_{period}_{multiplier}'
-        stx = f'STX_{period}_{multiplier}'
-
-        df['basic_ub'] = (df['high'] + df['low']) / 2 + multiplier * df['ATR']
-        df['basic_lb'] = (df['high'] + df['low']) / 2 - multiplier * df['ATR']
-
-        df['final_ub'] = 0.00
-        df['final_lb'] = 0.00
-
-        for i in range(period, len(df)):
-            df['final_ub'].iat[i] = (df['basic_ub'].iat[i] if df['basic_ub'].iat[i] < df['final_ub'].iat[i - 1] or df['close'].iat[i - 1] > df['final_ub'].iat[i - 1]
-                                     else df['final_ub'].iat[i - 1])
-            df['final_lb'].iat[i] = (df['basic_lb'].iat[i] if df['basic_lb'].iat[i] > df['final_lb'].iat[i - 1] or df['close'].iat[i - 1] < df['final_lb'].iat[i - 1]
-                                     else df['final_lb'].iat[i - 1])
-
-        df[st] = 0.00
-        for i in range(period, len(df)):
-            if df[st].iat[i - 1] == df['final_ub'].iat[i - 1] and df['close'].iat[i] <= df['final_ub'].iat[i]:
-                df[st].iat[i] = df['final_ub'].iat[i]
-            elif df[st].iat[i - 1] == df['final_ub'].iat[i - 1] and df['close'].iat[i] > df['final_ub'].iat[i]:
-                df[st].iat[i] = df['final_lb'].iat[i]
-            elif df[st].iat[i - 1] == df['final_lb'].iat[i - 1] and df['close'].iat[i] >= df['final_lb'].iat[i]:
-                df[st].iat[i] = df['final_lb'].iat[i]
-            elif df[st].iat[i - 1] == df['final_lb'].iat[i - 1] and df['close'].iat[i] < df['final_lb'].iat[i]:
-                df[st].iat[i] = df['final_ub'].iat[i]
-
-        df[stx] = np.where((df[st] > 0.00), np.where((df['close'] < df[st]), 'down', 'up'), np.NaN)
-
-        df.drop(['basic_ub', 'basic_lb', 'final_ub', 'final_lb'], inplace=True, axis=1)
-        df.fillna(0, inplace=True)
-
-        return DataFrame(index=df.index, data={
-            'ST': df[st],
-            'STX': df[stx]
-        })
