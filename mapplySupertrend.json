@@ -1,0 +1,42 @@
+{
+    "strategy_name": "mapplySupertrend",
+    "params": {
+      "max_open_trades": {
+        "max_open_trades": 3
+      },
+      "buy": {
+        "buy_m1": 4,
+        "buy_m2": 4,
+        "buy_m3": 7,
+        "buy_p1": 7,
+        "buy_p2": 18,
+        "buy_p3": 18
+      },
+      "sell": {
+        "sell_m1": 1,
+        "sell_m2": 3,
+        "sell_m3": 6,
+        "sell_p1": 16,
+        "sell_p2": 18,
+        "sell_p3": 18
+      },
+      "protection": {},
+      "roi": {
+        "0": 0.40900000000000003,
+        "151": 0.131,
+        "819": 0.024,
+        "2202": 0
+      },
+      "stoploss": {
+        "stoploss": -0.338
+      },
+      "trailing": {
+        "trailing_stop": true,
+        "trailing_stop_positive": 0.338,
+        "trailing_stop_positive_offset": 0.42800000000000005,
+        "trailing_only_offset_is_reached": true
+      }
+    },
+    "ft_stratparam_v": 1,
+    "export_time": "2024-12-19 12:26:22.951252+00:00"
+  }
