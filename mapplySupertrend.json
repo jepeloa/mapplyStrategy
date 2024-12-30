@@ -1,42 +1,53 @@
 {
-    "strategy_name": "mapplySupertrend",
-    "params": {
-      "max_open_trades": {
-        "max_open_trades": 3
-      },
-      "buy": {
-        "buy_m1": 4,
-        "buy_m2": 4,
-        "buy_m3": 7,
-        "buy_p1": 7,
-        "buy_p2": 18,
-        "buy_p3": 18
-      },
-      "sell": {
-        "sell_m1": 1,
-        "sell_m2": 3,
-        "sell_m3": 6,
-        "sell_p1": 16,
-        "sell_p2": 18,
-        "sell_p3": 18
-      },
-      "protection": {},
-      "roi": {
-        "0": 0.40900000000000003,
-        "151": 0.131,
-        "819": 0.024,
-        "2202": 0
-      },
-      "stoploss": {
-        "stoploss": -0.338
-      },
-      "trailing": {
-        "trailing_stop": true,
-        "trailing_stop_positive": 0.338,
-        "trailing_stop_positive_offset": 0.42800000000000005,
-        "trailing_only_offset_is_reached": true
-      }
+  "strategy_name": "mapplySupertrend",
+  "params": {
+    "max_open_trades": {
+      "max_open_trades": 30
     },
-    "ft_stratparam_v": 1,
-    "export_time": "2024-12-19 12:26:22.951252+00:00"
-  }
+    "buy": {
+      "fslope_buy": 5,
+      "rsi_buy": 53,
+      "rsi_length": 9,
+      "slope_length": 6,
+      "sslope_buy": -4
+    },
+    "sell": {
+      "fslope_sell": 0,
+      "stoploss_length": 11,
+      "ts0": 0.013,
+      "ts1": 0.01,
+      "ts2": 0.018,
+      "ts3": 0.04,
+      "ts4": 0.04,
+      "ts5": 0.06,
+      "tsl_target0": 0.03,
+      "tsl_target1": 0.056,
+      "tsl_target2": 0.09,
+      "tsl_target3": 0.15,
+      "tsl_target4": 0.18,
+      "tsl_target5": 0.2
+    },
+    "protection": {
+      "cooldown_lookback": 38,
+      "stop_duration": 88,
+      "use_stop_protection": false
+    },
+    "roi": {
+      "0": 0.236,
+      "79": 0.063,
+      "226": 0.043,
+      "489": 0
+    },
+    "stoploss": {
+      "stoploss": -0.333
+    },
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.171,
+      "trailing_stop_positive_offset": 0.21600000000000003,
+      "trailing_only_offset_is_reached": true
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2024-12-30 14:37:13.496655+00:00"
+}
