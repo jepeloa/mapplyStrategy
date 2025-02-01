@@ -1,53 +1,53 @@
 {
   "strategy_name": "mapplySupertrend",
   "params": {
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": null,
+      "trailing_stop_positive_offset": 0.0,
+      "trailing_only_offset_is_reached": false
+    },
     "max_open_trades": {
-      "max_open_trades": 30
+      "max_open_trades": 6
     },
     "buy": {
-      "fslope_buy": 5,
-      "rsi_buy": 53,
-      "rsi_length": 9,
-      "slope_length": 6,
-      "sslope_buy": -4
+      "fslope_buy": -4,
+      "rsi_buy": 41,
+      "rsi_length": 12,
+      "slope_length": 21,
+      "sslope_buy": 5
     },
     "sell": {
-      "fslope_sell": 0,
-      "stoploss_length": 11,
-      "ts0": 0.013,
-      "ts1": 0.01,
-      "ts2": 0.018,
-      "ts3": 0.04,
-      "ts4": 0.04,
+      "fslope_sell": -1,
+      "stoploss_length": 7,
+      "ts0": 0.015,
+      "ts1": 0.011,
+      "ts2": 0.025,
+      "ts3": 0.039,
+      "ts4": 0.05,
       "ts5": 0.06,
-      "tsl_target0": 0.03,
-      "tsl_target1": 0.056,
+      "tsl_target0": 0.047,
+      "tsl_target1": 0.057,
       "tsl_target2": 0.09,
-      "tsl_target3": 0.15,
-      "tsl_target4": 0.18,
+      "tsl_target3": 0.13,
+      "tsl_target4": 0.2,
       "tsl_target5": 0.2
     },
     "protection": {
-      "cooldown_lookback": 38,
-      "stop_duration": 88,
+      "cooldown_lookback": 37,
+      "stop_duration": 69,
       "use_stop_protection": false
     },
     "roi": {
-      "0": 0.236,
-      "79": 0.063,
-      "226": 0.043,
-      "489": 0
+      "0": 0.5329999999999999,
+      "480": 0.11099999999999999,
+      "1109": 0.052,
+      "2432": 0
     },
     "stoploss": {
-      "stoploss": -0.333
-    },
-    "trailing": {
-      "trailing_stop": true,
-      "trailing_stop_positive": 0.171,
-      "trailing_stop_positive_offset": 0.21600000000000003,
-      "trailing_only_offset_is_reached": true
+      "stoploss": -0.348
     }
   },
   "ft_stratparam_v": 1,
-  "export_time": "2024-12-30 14:37:13.496655+00:00"
+  "export_time": "2025-02-01 19:11:16.594936+00:00"
 }

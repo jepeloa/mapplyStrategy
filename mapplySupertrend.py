@@ -1,22 +1,4 @@
-# ==============================================================================================
-# The Slope is Dope strategy
-#
-# Made by:
-# ______         _         _      _____                      _         ______            _
-# |  _  \       | |       | |    /  __ \                    | |        |  _  \          | |
-# | | | | _   _ | |_  ___ | |__  | /  \/ _ __  _   _  _ __  | |_  ___  | | | | __ _   __| |
-# | | | || | | || __|/ __|| '_ \ | |    | '__|| | | || '_ \ | __|/ _ \ | | | |/ _` | / _` |
-# | |/ / | |_| || |_| (__ | | | || \__/\| |   | |_| || |_) || |_| (_) || |/ /| (_| || (_| |
-# |___/   \__,_| \__|\___||_| |_| \____/|_|    \__, || .__/  \__|\___/ |___/  \__,_| \__,_|
-#                                               __/ || |
-#                                              |___/ |_|
-# Version : 1.0
-# Date    : 2022-10031
-# Remarks :
-#    As published, explained and tested in my Youtube video:
-#    - https://youtu.be/UvS3ixWG2zs
-#    -
-# ==============================================================================================
+#Mapply
 
 # --- Do not remove these libs ---
 from freqtrade.strategy.interface import IStrategy
@@ -56,7 +38,7 @@ class mapplySupertrend(IStrategy):
     max_entry_position_adjustment = 0
     max_dca_multiplier = 1
     stoploss = -0.25
-    timeframe = '15m'
+    timeframe = '1h'
 
     # Number of candles the strategy requires before producing valid signals
     startup_candle_count: int = 30 
@@ -200,7 +182,7 @@ class mapplySupertrend(IStrategy):
             (
                 # Only enter when market is bullish (this is a choice)
                 (
-                # (dataframe['close'] > dataframe['marketMA']) &
+                 (dataframe['close'] > dataframe['marketMA']) &
                 # Only trade when the fast slope is above 0
                 (dataframe['fast_slope'] > self.fslope_buy.value) &
                 # Only trade when the slow slope is above 0
@@ -237,58 +219,3 @@ class mapplySupertrend(IStrategy):
             ),
             'sell'] = 1
         return dataframe
-
-
-# *   15/100:     51 trades. 48/0/3 Wins/Draws/Losses. Avg profit  14.37%. Median profit   3.99%. Total profit 3497.16371517 USDT ( 349.72%). Avg duration 5 days, 17:41:00 min. Objective: -3497.16372
-
-# 15 mintue timeframe
-#     # Buy hyperspace params:
-#     buy_params = {
-#         "fslope_buy": -1,
-#         "rsi_buy": 35,
-#         "rsi_length": 8,
-#         "slope_length": 16,
-#         "sslope_buy": -2,
-#     }
-
-#     # Sell hyperspace params:
-#     sell_params = {
-#         "fslope_sell": -5,
-#         "stoploss_length": 12,
-#         "ts0": 0.011,
-#         "ts1": 0.012,
-#         "ts2": 0.015,
-#         "ts3": 0.037,
-#         "ts4": 0.03,
-#         "ts5": 0.05,
-#         "tsl_target0": 0.05,
-#         "tsl_target1": 0.052,
-#         "tsl_target2": 0.097,
-#         "tsl_target3": 0.14,
-#         "tsl_target4": 0.16,
-#         "tsl_target5": 0.3,
-#     }
-
-#     # Protection hyperspace params:
-#     protection_params = {
-#         "cooldown_lookback": 5,  # value loaded from strategy
-#         "stop_duration": 5,  # value loaded from strategy
-#         "use_stop_protection": True,  # value loaded from strategy
-#     }
-
-#     # ROI table:  # value loaded from strategy
-#     minimal_roi = {
-#         "0": 0.609,
-#         "12443": 0.25,
-#         "19865": 0.11,
-#         "44116": 0
-#     }
-
-#     # Stoploss:
-#     stoploss = -0.9  # value loaded from strategy
-
-#     # Trailing stop:
-#     trailing_stop = True  # value loaded from strategy
-#     trailing_stop_positive = 0.03  # value loaded from strategy
-#     trailing_stop_positive_offset = 0.28  # value loaded from strategy
-#     trailing_only_offset_is_reached = True  # value loaded from strategy
