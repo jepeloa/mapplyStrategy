@@ -1,1 +1,2 @@
 Estrategia bot Mapply.
+.
