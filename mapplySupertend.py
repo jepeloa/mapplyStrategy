@@ -3,10 +3,17 @@ from freqtrade.strategy import IStrategy, IntParameter
 from pandas import DataFrame
 import talib.abstract as ta
 import numpy as np
+from freqtrade.persistence import Trade
+import datetime
+#BTC/USDT ETH/USDT XRP
+logger = logging.getLogger(__name__)
 
 class mapplySupertrend(IStrategy):
     INTERFACE_VERSION: int = 3
-    
+    def leverage(self, pair: str, current_time: datetime, current_rate: float,
+                 proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
+                 **kwargs) -> float:
+        return 1.0
     buy_params = {
         "buy_m1": 4,
         "buy_m2": 7,
@@ -32,14 +39,15 @@ class mapplySupertrend(IStrategy):
         "2221": 0
     }
 
-    stoploss = -0.12
+    stoploss = -0.03
 
     trailing_stop = True
     trailing_stop_positive = 0.05
     trailing_stop_positive_offset = 0.144
     trailing_only_offset_is_reached = False
+    can_short=True
 
-    timeframe = '1h'
+    #timeframe = '1h'
     startup_candle_count = 200
 
     buy_m1 = IntParameter(1, 7, default=4, space='buy')
@@ -55,6 +63,7 @@ class mapplySupertrend(IStrategy):
     sell_p1 = IntParameter(7, 21, default=14, space='sell')
     sell_p2 = IntParameter(7, 21, default=14, space='sell')
     sell_p3 = IntParameter(7, 21, default=14, space='sell')
+
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         # Calcular supertrends para la configuración actual
@@ -74,48 +83,71 @@ class mapplySupertrend(IStrategy):
         dataframe['supertrend_2_sell'] = supertrend_2_sell['STX']
         dataframe['supertrend_3_sell'] = supertrend_3_sell['STX']
 
-        # SMA de 200 para filtro de tendencia
-        dataframe['sma_200'] = ta.SMA(dataframe, timeperiod=200)
+        # EMA 200 (para filtro de tendencia, ajustado a 20 como en el código original)
+        dataframe['ema_20'] = ta.EMA(dataframe, timeperiod=20)
 
         # ADX + DI+ y DI-
         dataframe['ADX'] = ta.ADX(dataframe, timeperiod=14)
         dataframe['DI_plus'] = ta.PLUS_DI(dataframe, timeperiod=14)
         dataframe['DI_minus'] = ta.MINUS_DI(dataframe, timeperiod=14)
-
+        dataframe['rsi'] = ta.RSI(dataframe)
+        rsi = 0.1 * (dataframe['rsi'] - 50)
+        dataframe['fisher_rsi'] = (np.exp(2 * rsi) - 1) / (np.exp(2 * rsi) + 1)
+        dataframe['sar'] = ta.SAR(dataframe)
+        dataframe['sma'] = ta.SMA(dataframe, timeperiod=20)
+        dataframe['std'] = dataframe['close'].rolling(window=20).std()
         return dataframe
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Filtro ADX: tendencia fuerte (por ej. ADX > 20)
-        adx_threshold = 20
-        di_difference_threshold = 5
+        # Filtro ADX
+        adx_threshold = 50
+
+        dataframe.loc[
+            (
+               (dataframe['supertrend_1_sell'] == 'up') &
+               (dataframe['supertrend_2_sell'] == 'up') &
+               (dataframe['supertrend_3_sell'] == 'up') &
+               (dataframe['ADX'] > adx_threshold) &
+               #(dataframe['DI_plus'] > dataframe['DI_minus']) &
+               (dataframe['volume'] > 0)
+            ),
+            'enter_long'] = 1
+        
         dataframe.loc[
             (
                (dataframe['supertrend_1_sell'] == 'down') &
                (dataframe['supertrend_2_sell'] == 'down') &
                (dataframe['supertrend_3_sell'] == 'down') &
-               (dataframe['ADX'] < adx_threshold) &  # Mercado lateral
-               (abs(dataframe['DI_plus'] - dataframe['DI_minus']) < di_difference_threshold) &  # Confirmar lateralidad
-               (abs(dataframe['close'] - dataframe['sma_200']) < dataframe['sma_200'] * 0.02) &  # Precio cerca de SMA200
-               (dataframe['volume'] > 0)  # Filtro de volumen
+               (dataframe['ADX'] > adx_threshold) &
+               #(dataframe['DI_plus'] > dataframe['DI_minus']) &
+               (dataframe['volume'] > 0)
             ),
-            'enter_long'] = 1
+            'enter_short'] = 1
 
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # Mantenemos la salida igual, o podríamos exigir también condiciones de ADX/DI para salir.
-        # Por simplicidad, dejemos que la salida sea más libre.
-        adx_threshold=20
-        dataframe.loc[
-            (
+        # Ejemplo: Salir de la posición si el precio cierra por debajo de la EMA200
+        # y si el RSI está en zona de sobrecompra (por ejemplo, mayor a 70)
+        # dataframe.loc[
+        #     (
+        #         #(dataframe['close'] < dataframe['ema_200']) &
+        #         #(dataframe['rsi'] > 70) &
+        #         (dataframe['close'] < (dataframe['sma'] - 2 * dataframe['std'])) &
+        #         (dataframe['volume'] > 0)
+        #     ),
+        #     'exit_long'
+        # ] = 1
 
-               (dataframe['supertrend_1_buy'] == 'up') &
-               (dataframe['supertrend_2_buy'] == 'up') &
-               (dataframe['supertrend_3_buy'] == 'up') &
-               (dataframe['volume'] > 0)
-
-            ),
-            'exit_long'] = 1
+        # dataframe.loc[
+        #     (
+        #         #(dataframe['close'] < dataframe['ema_200']) &
+        #         #(dataframe['rsi'] > 70) &
+        #         (dataframe['close'] > (dataframe['sma'] - 2 * dataframe['std'])) &
+        #         (dataframe['volume'] > 0)
+        #     ),
+        #     'exit_short'
+        # ] = 1
 
         return dataframe
 
@@ -160,3 +192,4 @@ class mapplySupertrend(IStrategy):
             'ST': df[st],
             'STX': df[stx]
         })
+
