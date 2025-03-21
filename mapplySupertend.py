@@ -83,7 +83,7 @@ class mapplySupertrend(IStrategy):
         dataframe['supertrend_2_sell'] = supertrend_2_sell['STX']
         dataframe['supertrend_3_sell'] = supertrend_3_sell['STX']
         #valor medio del volumen
-        dataframe['vol_ma'] = dataframe['volume'].rolling(20).mean()
+        dataframe['vol_ma'] = dataframe['volume'].rolling(10).mean()
 
       
 
@@ -97,7 +97,7 @@ class mapplySupertrend(IStrategy):
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         # Filtro ADX
-        adx_threshold = 50
+        adx_threshold = 30
 
         dataframe.loc[
             (
