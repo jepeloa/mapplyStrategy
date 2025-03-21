@@ -47,7 +47,7 @@ class mapplySupertrend(IStrategy):
     trailing_only_offset_is_reached = False
     can_short=True
 
-    #timeframe = '1h'
+    timeframe = '1h'
     startup_candle_count = 200
 
     buy_m1 = IntParameter(1, 7, default=4, space='buy')
@@ -108,7 +108,7 @@ class mapplySupertrend(IStrategy):
                (dataframe['supertrend_2_sell'] == 'up') &
                (dataframe['supertrend_3_sell'] == 'up') &
                (dataframe['ADX'] > adx_threshold) &
-               #(dataframe['DI_plus'] > dataframe['DI_minus']) &
+               (dataframe['DI_plus'] > dataframe['DI_minus']) &
                (dataframe['volume'] > 0)
             ),
             'enter_long'] = 1
@@ -119,7 +119,7 @@ class mapplySupertrend(IStrategy):
                (dataframe['supertrend_2_sell'] == 'down') &
                (dataframe['supertrend_3_sell'] == 'down') &
                (dataframe['ADX'] > adx_threshold) &
-               #(dataframe['DI_plus'] > dataframe['DI_minus']) &
+               (dataframe['DI_plus'] < dataframe['DI_minus']) &
                (dataframe['volume'] > 0)
             ),
             'enter_short'] = 1
@@ -155,7 +155,7 @@ class mapplySupertrend(IStrategy):
         df = dataframe.copy()
 
         df['TR'] = ta.TRANGE(df)
-        df['ATR'] = ta.SMA(df['TR'], period)
+        df['ATR'] = ta.SMA(df['TR'], int(period))
 
         st = f'ST_{period}_{multiplier}'
         stx = f'STX_{period}_{multiplier}'
@@ -192,4 +192,28 @@ class mapplySupertrend(IStrategy):
             'ST': df[st],
             'STX': df[stx]
         })
+    
+    def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
+                        time_in_force: str, current_time, entry_tag, side: str, **kwargs) -> bool:
+        df, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        
+        # Usamos un período de 20 velas para el cálculo
+        bollinger_period = 20
+        recent_closes = df['close'].iloc[-bollinger_period:]
+        
+        # Calculamos los logaritmos de los retornos
+        log_returns = np.log(recent_closes / recent_closes.shift(1)).dropna()
+        std_log = log_returns.std()
+        
+        # Tomamos el último precio de cierre como referencia
+        base_price = df.iloc[-1]['close']
+        
+        # Calculamos las bandas de Bollinger usando el logaritmo de los retornos:
+        # La banda inferior es base_price * exp(-std_log) y la superior base_price * exp(std_log)
+        bb_lower = base_price * np.exp(-std_log)
+        bb_upper = base_price * np.exp(std_log)
+        
+        # Verificamos que el precio de entrada (rate) se encuentre dentro de la banda
+        if rate < bb_lower or rate > bb_upper:
+            return False
 
