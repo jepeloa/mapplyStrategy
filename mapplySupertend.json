@@ -5,38 +5,38 @@
       "max_open_trades": 6
     },
     "buy": {
-      "buy_m1": 3,
-      "buy_m2": 7,
-      "buy_m3": 6,
-      "buy_p1": 21,
-      "buy_p2": 9,
-      "buy_p3": 20
+      "buy_m1": 2,
+      "buy_m2": 2,
+      "buy_m3": 4,
+      "buy_p1": 7,
+      "buy_p2": 8,
+      "buy_p3": 17
     },
     "sell": {
-      "sell_m1": 7,
-      "sell_m2": 7,
-      "sell_m3": 2,
-      "sell_p1": 18,
-      "sell_p2": 15,
-      "sell_p3": 16
+      "sell_m1": 3,
+      "sell_m2": 3,
+      "sell_m3": 7,
+      "sell_p1": 8,
+      "sell_p2": 16,
+      "sell_p3": 20
     },
     "protection": {},
     "roi": {
-      "0": 0.301,
-      "384": 0.22299999999999998,
-      "930": 0.074,
-      "2358": 0
+      "0": 0.127,
+      "188": 0.092,
+      "862": 0.065,
+      "1558": 0
     },
     "stoploss": {
-      "stoploss": -0.244
+      "stoploss": -0.15
     },
     "trailing": {
       "trailing_stop": true,
-      "trailing_stop_positive": 0.017,
-      "trailing_stop_positive_offset": 0.109,
-      "trailing_only_offset_is_reached": true
+      "trailing_stop_positive": 0.181,
+      "trailing_stop_positive_offset": 0.271,
+      "trailing_only_offset_is_reached": false
     }
   },
   "ft_stratparam_v": 1,
-  "export_time": "2025-03-21 18:03:12.686537+00:00"
+  "export_time": "2025-03-22 04:08:50.393464+00:00"
 }
